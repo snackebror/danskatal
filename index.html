@@ -14,29 +14,30 @@
       text-align: center;
     }
 
-    h1 {
-      margin-bottom: 1rem;
-    }
-
     #word {
       font-size: 2rem;
       margin: 1.5rem 0;
       font-weight: bold;
     }
 
-    input {
+    .answer-row {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 0.8rem;
+    }
+
+    .answer-row input {
+      flex: 3;                 /* ca 50 % bredare än knappen */
       font-size: 1.2rem;
       padding: 0.6rem;
-      width: 100%;
-      margin-top: 0.5rem;
       text-align: center;
     }
 
-    button {
+    .answer-row button {
+      flex: 2;
       font-size: 1.2rem;
       padding: 0.6rem 1.2rem;
-      margin: 0.8rem auto;
-      display: block;
     }
 
     #result {
@@ -51,19 +52,22 @@
 
   <div id="word"></div>
 
-  <input
-    id="answer"
-    type="number"
-    inputmode="numeric"
-    pattern="[0-9]*"
-    placeholder="Skriv tallet"
-  />
+  <div class="answer-row">
+    <input
+      id="answer"
+      type="number"
+      inputmode="numeric"
+      pattern="[0-9]*"
+      placeholder="Skriv tallet"
+    />
 
-  <button onclick="check()">Svar</button>
+    <button onclick="check()">Svar</button>
+  </div>
 
   <div id="result"></div>
 
   <script>
+    // ====== TALDATA ======
     const ones = [
       "nul","en","to","tre","fire","fem","seks","syv","otte","ni",
       "ti","elleve","tolv","tretten","fjorten","femten",
@@ -88,15 +92,27 @@
       const one = n % 10;
 
       if (one === 0) return tens[ten];
-
       return ones[one] + " og " + tens[ten];
     }
 
+    // ====== SPELLOGIK ======
     let current = 0;
+    let mistakes = [];      // samlar fel
+    let repeatQueue = [];   // frågor som repeteras
+
+    function getRandomNumber() {
+      return Math.floor(Math.random() * 100);
+    }
 
     function newNumber() {
-      current = Math.floor(Math.random() * 100);
-      document.getElementById("word").textContent = numberToDanish(current);
+      if (repeatQueue.length > 0) {
+        current = repeatQueue.shift();
+      } else {
+        current = getRandomNumber();
+      }
+
+      document.getElementById("word").textContent =
+        numberToDanish(current);
       document.getElementById("answer").value = "";
       document.getElementById("result").textContent = "";
       document.getElementById("answer").focus();
@@ -106,11 +122,20 @@
       const input = document.getElementById("answer").value.trim();
       if (input === "") return;
 
-      if (parseInt(input, 10) === current) {
+      const answer = parseInt(input, 10);
+
+      if (answer === current) {
         document.getElementById("result").textContent = "✅ Korrekt!";
       } else {
         document.getElementById("result").textContent =
           "❌ Forkert – korrekt svar er " + current;
+        mistakes.push(current);
+      }
+
+      // När 5 fel samlats → repetera dem
+      if (mistakes.length === 5 && repeatQueue.length === 0) {
+        repeatQueue = mistakes.slice();
+        mistakes = [];
       }
 
       setTimeout(newNumber, 1200);
@@ -123,7 +148,9 @@
       }
     });
 
+    // Start
     newNumber();
   </script>
+
 </body>
 </html>
