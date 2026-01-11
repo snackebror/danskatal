@@ -53,12 +53,12 @@
   <div class="answer-row">
     <input
       id="answer"
-      type="number"
+      type="text"
       inputmode="numeric"
       pattern="[0-9]*"
       placeholder="Skriv tallet"
-      size="12"   <!-- 👈 exakt samma bredd som texten -->
-    />
+      size="12"
+    >
 
     <button onclick="check()">Svar</button>
   </div>
@@ -100,11 +100,9 @@
     }
 
     function newNumber() {
-      if (repeatQueue.length > 0) {
-        current = repeatQueue.shift();
-      } else {
-        current = getRandomNumber();
-      }
+      current = repeatQueue.length > 0
+        ? repeatQueue.shift()
+        : getRandomNumber();
 
       document.getElementById("word").textContent =
         numberToDanish(current);
