@@ -2,10 +2,111 @@
 <html lang="da">
 <head>
   <meta charset="UTF-8">
-  <title>Træna danske tal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Danske tal – træning</title>
+
+  <style>
+    body {
+      font-family: system-ui, sans-serif;
+      max-width: 400px;
+      margin: auto;
+      padding: 2rem;
+      text-align: center;
+    }
+
+    #word {
+      font-size: 2rem;
+      margin: 1.5rem 0;
+      font-weight: bold;
+    }
+
+    input, button {
+      font-size: 1.2rem;
+      padding: 0.6rem;
+      width: 100%;
+      margin-top: 0.5rem;
+      text-align: center;
+    }
+
+    #result {
+      margin-top: 1rem;
+      font-weight: bold;
+    }
+  </style>
 </head>
+
 <body>
-  <h1>Træna danske tal</h1>
-  <p>Hvis du kan læse dette, virker GitHub Pages 🎉</p>
+  <h1>Danske tal</h1>
+
+  <div id="word"></div>
+
+  <input
+    id="answer"
+    type="number"
+    inputmode="numeric"
+    pattern="[0-9]*"
+    placeholder="Skriv tallet"
+  />
+
+  <button onclick="check()">Svar</button>
+
+  <div id="result"></div>
+
+  <script>
+    const ones = [
+      "nul","en","to","tre","fire","fem","seks","syv","otte","ni",
+      "ti","elleve","tolv","tretten","fjorten","femten",
+      "seksten","sytten","atten","nitten"
+    ];
+
+    const tens = {
+      20: "tyve",
+      30: "tredive",
+      40: "fyrre",
+      50: "halvtreds",
+      60: "tres",
+      70: "halvfjerds",
+      80: "firs",
+      90: "halvfems"
+    };
+
+    function numberToDanish(n) {
+      if (n < 20) return ones[n];
+
+      const ten = Math.floor(n / 10) * 10;
+      const one = n % 10;
+
+      if (one === 0) return tens[ten];
+
+      return ones[one] + " og " + tens[ten];
+    }
+
+    let current = 0;
+
+    function newNumber() {
+      current = Math.floor(Math.random() * 100);
+      document.getElementById("word").textContent =
+        numberToDanish(current);
+      document.getElementById("answer").value = "";
+      document.getElementById("result").textContent = "";
+      document.getElementById("answer").focus();
+    }
+
+    function check() {
+      const input = document.getElementById("answer").value;
+      if (input === "") return;
+
+      if (parseInt(input) === current) {
+        document.getElementById("result").textContent = "✅ Korrekt!";
+      } else {
+        document.getElementById("result").textContent =
+          "❌ Forkert – korrekt svar er " + current;
+      }
+
+      setTimeout(newNumber, 1200);
+    }
+
+    newNumber();
+  </script>
 </body>
 </html>
