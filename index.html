@@ -27,14 +27,13 @@
       gap: 0.8rem;
     }
 
-    .answer-row input {
+    input {
       font-size: 1.2rem;
       padding: 0.6rem;
       text-align: center;
-      width: auto;        /* 👈 exakt så bred som texten */
     }
 
-    .answer-row button {
+    button {
       font-size: 1.2rem;
       padding: 0.6rem 1.2rem;
     }
@@ -58,6 +57,7 @@
       inputmode="numeric"
       pattern="[0-9]*"
       placeholder="Skriv tallet"
+      size="12"   <!-- 👈 exakt samma bredd som texten -->
     />
 
     <button onclick="check()">Svar</button>
@@ -66,7 +66,6 @@
   <div id="result"></div>
 
   <script>
-    // ====== TALDATA ======
     const ones = [
       "nul","en","to","tre","fire","fem","seks","syv","otte","ni",
       "ti","elleve","tolv","tretten","fjorten","femten",
@@ -86,15 +85,12 @@
 
     function numberToDanish(n) {
       if (n < 20) return ones[n];
-
       const ten = Math.floor(n / 10) * 10;
       const one = n % 10;
-
       if (one === 0) return tens[ten];
       return ones[one] + " og " + tens[ten];
     }
 
-    // ====== SPELLOGIK ======
     let current = 0;
     let mistakes = [];
     let repeatQueue = [];
@@ -131,7 +127,6 @@
         mistakes.push(current);
       }
 
-      // När 5 fel samlats → repetera dem
       if (mistakes.length === 5 && repeatQueue.length === 0) {
         repeatQueue = mistakes.slice();
         mistakes = [];
@@ -140,14 +135,12 @@
       setTimeout(newNumber, 1200);
     }
 
-    // Enter-tangent (Android & desktop)
     document.getElementById("answer").addEventListener("keydown", function (e) {
       if (e.key === "Enter" && this.value.trim() !== "") {
         check();
       }
     });
 
-    // Start
     newNumber();
   </script>
 
