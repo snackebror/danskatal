@@ -28,14 +28,13 @@
     }
 
     .answer-row input {
-      flex: 3;                 /* ca 50 % bredare än knappen */
       font-size: 1.2rem;
       padding: 0.6rem;
       text-align: center;
+      width: auto;        /* 👈 exakt så bred som texten */
     }
 
     .answer-row button {
-      flex: 2;
       font-size: 1.2rem;
       padding: 0.6rem 1.2rem;
     }
@@ -97,8 +96,8 @@
 
     // ====== SPELLOGIK ======
     let current = 0;
-    let mistakes = [];      // samlar fel
-    let repeatQueue = [];   // frågor som repeteras
+    let mistakes = [];
+    let repeatQueue = [];
 
     function getRandomNumber() {
       return Math.floor(Math.random() * 100);
