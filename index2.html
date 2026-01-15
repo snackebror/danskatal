@@ -102,31 +102,51 @@
       return one === 0 ? tens[ten] : ones[one] + " og " + tens[ten];
     }
 
-    /* ====== TALSYNTHES ====== */
+    /* ====== LJUD ====== */
     let audioEnabled = false;
+    let audioCtx = null;
 
     function speakDanish(text) {
-      if (!audioEnabled) return;
-      if (!window.speechSynthesis) return;
+      if (!audioEnabled || !window.speechSynthesis) return;
 
-      window.speechSynthesis.cancel();
+      speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
       u.lang = "da-DK";
       u.rate = 0.9;
-      window.speechSynthesis.speak(u);
+      speechSynthesis.speak(u);
+    }
+
+    function playErrorBeep() {
+      if (!audioEnabled || !audioCtx) return;
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.value = 600; // tonhöjd
+      gain.gain.value = 0.15;     // låg volym
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.15); // kort pip
     }
 
     document.getElementById("startAudio").addEventListener("click", () => {
       audioEnabled = true;
 
-      // Samsung/Chrome: kräver ett speak() direkt efter klick
+      // Skapa AudioContext EFTER klick (krav i Samsung Internet)
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+      // Lås upp talsyntes
       const unlock = new SpeechSynthesisUtterance(" ");
       unlock.lang = "da-DK";
-      window.speechSynthesis.speak(unlock);
+      speechSynthesis.speak(unlock);
 
       document.getElementById("audioInfo").style.display = "none";
 
-      // Läs upp aktuellt tal
+      // Läs upp första talet
       speakDanish(numberToDanish(current));
     });
 
@@ -167,6 +187,7 @@
       } else {
         document.getElementById("result").textContent =
           "❌ Forkert – korrekt svar er " + current;
+        playErrorBeep(); // 🔔 felsignal
       }
 
       setTimeout(newNumber, 1200);
