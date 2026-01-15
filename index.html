@@ -8,14 +8,23 @@
   <style>
     body {
       font-family: system-ui, sans-serif;
-      max-width: 400px;
+      max-width: 420px;
       margin: auto;
       padding: 2rem;
       text-align: center;
     }
 
+    #audioInfo {
+      margin-bottom: 1.2rem;
+    }
+
+    #startAudio {
+      font-size: 1.3rem;
+      padding: 0.7rem 1.1rem;
+    }
+
     #word {
-      font-size: 2rem;
+      font-size: 2.2rem;
       margin: 1.5rem 0;
       font-weight: bold;
     }
@@ -23,7 +32,6 @@
     .answer-row {
       display: flex;
       justify-content: center;
-      align-items: center;
       gap: 0.8rem;
     }
 
@@ -34,19 +42,23 @@
     }
 
     button {
-      font-size: 1.2rem;
-      padding: 0.6rem 1.2rem;
+      font-size: 1.1rem;
+      padding: 0.6rem 1.1rem;
     }
 
     #result {
       margin-top: 1rem;
-      font-weight: bold;
       min-height: 1.5em;
+      font-weight: bold;
     }
   </style>
 </head>
 
 <body>
+
+  <div id="audioInfo">
+    <button id="startAudio">🔊 Starta ljud</button>
+  </div>
 
   <div id="word"></div>
 
@@ -57,16 +69,15 @@
       inputmode="numeric"
       pattern="[0-9]*"
       placeholder="Skriv tallet"
-      size="12"
+      size="10"
     >
-
     <button onclick="check()">Svar</button>
   </div>
 
   <div id="result"></div>
 
   <script>
-    // ====== TALDATA ======
+    /* ====== TALDATA ====== */
     const ones = [
       "nul","en","to","tre","fire","fem","seks","syv","otte","ni",
       "ti","elleve","tolv","tretten","fjorten","femten",
@@ -88,15 +99,63 @@
       if (n < 20) return ones[n];
       const ten = Math.floor(n / 10) * 10;
       const one = n % 10;
-      if (one === 0) return tens[ten];
-      return ones[one] + " og " + tens[ten];
+      return one === 0 ? tens[ten] : ones[one] + " og " + tens[ten];
     }
 
-    // ====== SPELLOGIK ======
+    /* ====== LJUD ====== */
+    let audioEnabled = false;
+    let audioCtx = null;
+
+    function speakDanish(text) {
+      if (!audioEnabled || !window.speechSynthesis) return;
+
+      speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "da-DK";
+      u.rate = 0.9;
+      speechSynthesis.speak(u);
+    }
+
+    function playErrorBeep() {
+      if (!audioEnabled || !audioCtx) return;
+
+      // 🔑 VIKTIGT: se till att AudioContext är aktiv
+      if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+      }
+
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+
+      osc.type = "sine";
+      osc.frequency.value = 650;
+      gain.gain.value = 0.25;
+
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.15);
+    }
+
+    document.getElementById("startAudio").addEventListener("click", async () => {
+      audioEnabled = true;
+
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      await audioCtx.resume(); // 🔑 KRITISKT
+
+      // lås upp talsyntes
+      const unlock = new SpeechSynthesisUtterance(" ");
+      unlock.lang = "da-DK";
+      speechSynthesis.speak(unlock);
+
+      document.getElementById("audioInfo").style.display = "none";
+      speakDanish(numberToDanish(current));
+    });
+
+    /* ====== SPELLOGIK ====== */
     let current = null;
     let lastAsked = null;
-    let mistakes = [];
-    let repeatQueue = [];
 
     function getRandomNumber() {
       let n;
@@ -106,29 +165,15 @@
       return n;
     }
 
-    function getNextNumber() {
-      // Försök ta från repetitionskön först
-      if (repeatQueue.length > 0) {
-        // Om första är samma som förra – försök nästa
-        if (repeatQueue[0] === lastAsked && repeatQueue.length > 1) {
-          return repeatQueue.splice(1, 1)[0];
-        }
-        if (repeatQueue[0] !== lastAsked) {
-          return repeatQueue.shift();
-        }
-        // Fallback: välj slump
-        return getRandomNumber();
-      }
-
-      return getRandomNumber();
-    }
-
     function newNumber() {
-      current = getNextNumber();
+      current = getRandomNumber();
       lastAsked = current;
 
-      document.getElementById("word").textContent =
-        numberToDanish(current);
+      const word = numberToDanish(current);
+      document.getElementById("word").textContent = word;
+
+      speakDanish(word);
+
       document.getElementById("answer").value = "";
       document.getElementById("result").textContent = "";
       document.getElementById("answer").focus();
@@ -145,26 +190,16 @@
       } else {
         document.getElementById("result").textContent =
           "❌ Forkert – korrekt svar er " + current;
-        mistakes.push(current);
-      }
-
-      // När 5 fel samlats → repetera dem
-      if (mistakes.length === 5 && repeatQueue.length === 0) {
-        repeatQueue = mistakes.slice();
-        mistakes = [];
+        playErrorBeep(); // 🔔 NU HÖRS DEN
       }
 
       setTimeout(newNumber, 1200);
     }
 
-    // Enter-tangent (Android & desktop)
-    document.getElementById("answer").addEventListener("keydown", function (e) {
-      if (e.key === "Enter" && this.value.trim() !== "") {
-        check();
-      }
+    document.getElementById("answer").addEventListener("keydown", e => {
+      if (e.key === "Enter") check();
     });
 
-    // Start
     newNumber();
   </script>
 
