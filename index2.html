@@ -14,11 +14,13 @@
       text-align: center;
     }
 
+    #audioInfo {
+      margin-bottom: 1.2rem;
+    }
+
     #startAudio {
-      font-size: 1.4rem;
-      padding: 0.8rem 1.2rem;
-      margin-bottom: 1.5rem;
-      cursor: pointer;
+      font-size: 1.3rem;
+      padding: 0.7rem 1.1rem;
     }
 
     #word {
@@ -30,7 +32,6 @@
     .answer-row {
       display: flex;
       justify-content: center;
-      align-items: center;
       gap: 0.8rem;
     }
 
@@ -41,19 +42,143 @@
     }
 
     button {
-      font-size: 1.2rem;
-      padding: 0.6rem 1.2rem;
+      font-size: 1.1rem;
+      padding: 0.6rem 1.1rem;
     }
 
     #result {
       margin-top: 1rem;
-      font-weight: bold;
       min-height: 1.5em;
+      font-weight: bold;
     }
   </style>
 </head>
 
 <body>
 
-  <!-- STARTA LJUD (KRÄVS FÖR SAMSUNG INTERNET) -->
-  <button id="
+  <div id="audioInfo">
+    <button id="startAudio">🔊 Starta ljud</button>
+  </div>
+
+  <div id="word"></div>
+
+  <div class="answer-row">
+    <input
+      id="answer"
+      type="text"
+      inputmode="numeric"
+      pattern="[0-9]*"
+      placeholder="Skriv tallet"
+      size="10"
+    >
+    <button onclick="check()">Svar</button>
+  </div>
+
+  <div id="result"></div>
+
+  <script>
+    /* ====== TALDATA ====== */
+    const ones = [
+      "nul","en","to","tre","fire","fem","seks","syv","otte","ni",
+      "ti","elleve","tolv","tretten","fjorten","femten",
+      "seksten","sytten","atten","nitten"
+    ];
+
+    const tens = {
+      20: "tyve",
+      30: "tredive",
+      40: "fyrre",
+      50: "halvtreds",
+      60: "tres",
+      70: "halvfjerds",
+      80: "firs",
+      90: "halvfems"
+    };
+
+    function numberToDanish(n) {
+      if (n < 20) return ones[n];
+      const ten = Math.floor(n / 10) * 10;
+      const one = n % 10;
+      return one === 0 ? tens[ten] : ones[one] + " og " + tens[ten];
+    }
+
+    /* ====== TALSYNTHES ====== */
+    let audioEnabled = false;
+
+    function speakDanish(text) {
+      if (!audioEnabled) return;
+      if (!window.speechSynthesis) return;
+
+      window.speechSynthesis.cancel();
+      const u = new SpeechSynthesisUtterance(text);
+      u.lang = "da-DK";
+      u.rate = 0.9;
+      window.speechSynthesis.speak(u);
+    }
+
+    document.getElementById("startAudio").addEventListener("click", () => {
+      audioEnabled = true;
+
+      // Samsung/Chrome: kräver ett speak() direkt efter klick
+      const unlock = new SpeechSynthesisUtterance(" ");
+      unlock.lang = "da-DK";
+      window.speechSynthesis.speak(unlock);
+
+      document.getElementById("audioInfo").style.display = "none";
+
+      // Läs upp aktuellt tal
+      speakDanish(numberToDanish(current));
+    });
+
+    /* ====== SPELLOGIK ====== */
+    let current = null;
+    let lastAsked = null;
+
+    function getRandomNumber() {
+      let n;
+      do {
+        n = Math.floor(Math.random() * 100);
+      } while (n === lastAsked);
+      return n;
+    }
+
+    function newNumber() {
+      current = getRandomNumber();
+      lastAsked = current;
+
+      const word = numberToDanish(current);
+      document.getElementById("word").textContent = word;
+
+      speakDanish(word);
+
+      document.getElementById("answer").value = "";
+      document.getElementById("result").textContent = "";
+      document.getElementById("answer").focus();
+    }
+
+    function check() {
+      const input = document.getElementById("answer").value.trim();
+      if (input === "") return;
+
+      const answer = parseInt(input, 10);
+
+      if (answer === current) {
+        document.getElementById("result").textContent = "✅ Korrekt!";
+      } else {
+        document.getElementById("result").textContent =
+          "❌ Forkert – korrekt svar er " + current;
+      }
+
+      setTimeout(newNumber, 1200);
+    }
+
+    document.getElementById("answer").addEventListener("keydown", e => {
+      if (e.key === "Enter") check();
+    });
+
+    // Start spelet (utan ljud)
+    newNumber();
+  </script>
+
+</body>
+</html>
