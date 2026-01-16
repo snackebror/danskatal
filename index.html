@@ -56,6 +56,7 @@
 
 <body>
 
+  <!-- Krävs för alla mobila webbläsare -->
   <div id="audioInfo">
     <button id="startAudio">🔊 Starta ljud</button>
   </div>
@@ -107,7 +108,8 @@
     let audioCtx = null;
 
     function speakDanish(text) {
-      if (!audioEnabled || !window.speechSynthesis) return;
+      if (!audioEnabled) return;
+      if (!window.speechSynthesis) return;
 
       speechSynthesis.cancel();
       const u = new SpeechSynthesisUtterance(text);
@@ -119,7 +121,6 @@
     function playErrorBeep() {
       if (!audioEnabled || !audioCtx) return;
 
-      // 🔑 VIKTIGT: se till att AudioContext är aktiv
       if (audioCtx.state === "suspended") {
         audioCtx.resume();
       }
@@ -142,14 +143,16 @@
       audioEnabled = true;
 
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-      await audioCtx.resume(); // 🔑 KRITISKT
+      await audioCtx.resume();
 
-      // lås upp talsyntes
+      // lås upp TTS (krävs i mobil-webbläsare)
       const unlock = new SpeechSynthesisUtterance(" ");
       unlock.lang = "da-DK";
       speechSynthesis.speak(unlock);
 
       document.getElementById("audioInfo").style.display = "none";
+
+      // säg första talet (direkt i klick → iOS-säkert)
       speakDanish(numberToDanish(current));
     });
 
@@ -169,10 +172,8 @@
       current = getRandomNumber();
       lastAsked = current;
 
-      const word = numberToDanish(current);
-      document.getElementById("word").textContent = word;
-
-      speakDanish(word);
+      document.getElementById("word").textContent =
+        numberToDanish(current);
 
       document.getElementById("answer").value = "";
       document.getElementById("result").textContent = "";
@@ -190,16 +191,22 @@
       } else {
         document.getElementById("result").textContent =
           "❌ Forkert – korrekt svar er " + current;
-        playErrorBeep(); // 🔔 NU HÖRS DEN
+        playErrorBeep();
       }
 
-      setTimeout(newNumber, 1200);
+      // 🔊 iOS-SÄKER UPPLÄSNING:
+      // newNumber + speak sker efter knapp/Enter
+      setTimeout(() => {
+        newNumber();
+        speakDanish(numberToDanish(current));
+      }, 50);
     }
 
     document.getElementById("answer").addEventListener("keydown", e => {
       if (e.key === "Enter") check();
     });
 
+    // Start – visar första talet (utan ljud)
     newNumber();
   </script>
 
