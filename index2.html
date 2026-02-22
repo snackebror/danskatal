@@ -1,205 +1,157 @@
 <!DOCTYPE html>
 <html lang="da">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Danske tal – træning</title>
-
-  <style>
-    body {
-      font-family: system-ui, sans-serif;
-      max-width: 420px;
-      margin: auto;
-      padding: 2rem;
-      text-align: center;
-    }
-
-    #audioInfo {
-      margin-bottom: 1.2rem;
-    }
-
-    #startAudio {
-      font-size: 1.3rem;
-      padding: 0.7rem 1.1rem;
-    }
-
-    #word {
-      font-size: 2.2rem;
-      margin: 1.5rem 0;
-      font-weight: bold;
-    }
-
-    .answer-row {
-      display: flex;
-      justify-content: center;
-      gap: 0.8rem;
-    }
-
-    input {
-      font-size: 1.2rem;
-      padding: 0.6rem;
-      text-align: center;
-    }
-
-    button {
-      font-size: 1.1rem;
-      padding: 0.6rem 1.1rem;
-    }
-
-    #result {
-      margin-top: 1rem;
-      min-height: 1.5em;
-      font-weight: bold;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Danske summor – kassaträning</title>
+<style>
+body { font-family: system-ui,sans-serif; max-width: 420px; margin: auto; padding: 2rem; text-align: center; }
+#audioInfo { margin-bottom: 1.2rem; }
+#startAudio { font-size: 1.3rem; padding: 0.7rem 1.1rem; }
+#word { font-size: 2rem; margin: 1.5rem 0; font-weight: bold; }
+.answer-row { display: flex; justify-content: center; gap: 0.8rem; }
+input { font-size: 1.2rem; padding: 0.6rem; text-align: center; width: 120px; }
+button { font-size: 1.1rem; padding: 0.6rem 1.1rem; }
+#result { margin-top: 1rem; min-height: 1.5em; font-weight: bold; }
+</style>
 </head>
-
 <body>
 
-  <div id="audioInfo">
-    <button id="startAudio">🔊 Starta ljud</button>
-  </div>
+<div id="audioInfo">
+  <button id="startAudio">🔊 Starta ljud</button>
+</div>
 
-  <div id="word"></div>
+<div id="word"></div>
 
-  <div class="answer-row">
-    <input
-      id="answer"
-      type="text"
-      inputmode="numeric"
-      pattern="[0-9]*"
-      placeholder="Skriv tallet"
-      size="10"
-    >
-    <button onclick="check()">Svar</button>
-  </div>
+<div class="answer-row">
+  <input id="answer" type="text" inputmode="decimal" placeholder="Skriv summan">
+  <button onclick="check()">Svar</button>
+</div>
 
-  <div id="result"></div>
+<div id="result"></div>
 
-  <script>
-    /* ====== TALDATA ====== */
-    const ones = [
-      "nul","en","to","tre","fire","fem","seks","syv","otte","ni",
-      "ti","elleve","tolv","tretten","fjorten","femten",
-      "seksten","sytten","atten","nitten"
-    ];
+<script>
+/* ====== Kassaspråk för danska summor ====== */
+function numberToDanishCash(n) {
+  const kroner = Math.floor(n);
+  const ore = Math.round((n - kroner) * 100);
 
-    const tens = {
-      20: "tyve",
-      30: "tredive",
-      40: "fyrre",
-      50: "halvtreds",
-      60: "tres",
-      70: "halvfjerds",
-      80: "firs",
-      90: "halvfems"
-    };
-
-    function numberToDanish(n) {
-      if (n < 20) return ones[n];
-      const ten = Math.floor(n / 10) * 10;
-      const one = n % 10;
-      return one === 0 ? tens[ten] : ones[one] + " og " + tens[ten];
+  const ones = ["nul","en","to","tre","fire","fem","seks","syv","otte","ni",
+      "ti","elleve","tolv","tretten","fjorten","femten","seksten","sytten","atten","nitten"];
+  const tens = {20:"tyve",30:"tredive",40:"fyrre",50:"halvtreds",60:"tres",70:"halvfjerds",80:"firs",90:"halvfems"};
+  
+  function intToWords(num) {
+    if(num < 20) return ones[num];
+    if(num < 100) {
+      const ten = Math.floor(num/10)*10;
+      const one = num%10;
+      return one===0?tens[ten]:ones[one]+" og "+tens[ten];
     }
+    const hundreds = Math.floor(num/100);
+    const remainder = num%100;
+    let text = ones[hundreds]+" hundrede";
+    if(remainder>0) text += " " + intToWords(remainder);
+    return text;
+  }
 
-    /* ====== LJUD ====== */
-    let audioEnabled = false;
-    let audioCtx = null;
+  // Kronor
+  let text = intToWords(kroner);
 
-    function speakDanish(text) {
-      if (!audioEnabled || !window.speechSynthesis) return;
-
-      speechSynthesis.cancel();
-      const u = new SpeechSynthesisUtterance(text);
-      u.lang = "da-DK";
-      u.rate = 0.9;
-      speechSynthesis.speak(u);
+  // Öre enligt kassaspråk: avrunda till närmaste 5
+  if(ore > 0) {
+    let roundedOre = Math.round(ore/5)*5;
+    if(roundedOre === 100) {
+      text = intToWords(kroner+1);
+    } else {
+      const oreText = tens[roundedOre] || ones[roundedOre] || "";
+      if(oreText) text += " og " + oreText;
     }
+  }
+  return text;
+}
 
-    function playErrorBeep() {
-      if (!audioEnabled || !audioCtx) return;
+/* ====== Ljudfunktion ====== */
+let audioEnabled=false;
+let audioCtx=null;
 
-      const osc = audioCtx.createOscillator();
-      const gain = audioCtx.createGain();
+function speakDanish(text){
+  if(!audioEnabled||!window.speechSynthesis) return;
+  speechSynthesis.cancel();
+  const u=new SpeechSynthesisUtterance(text);
+  u.lang="da-DK";
+  u.rate=0.9;
+  speechSynthesis.speak(u);
+}
 
-      osc.type = "sine";
-      osc.frequency.value = 600; // tonhöjd
-      gain.gain.value = 0.15;     // låg volym
+function playErrorBeep(){
+  if(!audioEnabled||!audioCtx) return;
+  const osc=audioCtx.createOscillator();
+  const gain=audioCtx.createGain();
+  osc.type="sine";
+  osc.frequency.value=600;
+  gain.gain.value=0.15;
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  osc.start();
+  osc.stop(audioCtx.currentTime+0.15);
+}
 
-      osc.connect(gain);
-      gain.connect(audioCtx.destination);
+document.getElementById("startAudio").addEventListener("click",()=>{
+  audioEnabled=true;
+  audioCtx=new (window.AudioContext||window.webkitAudioContext)();
+  const unlock=new SpeechSynthesisUtterance(" ");
+  unlock.lang="da-DK";
+  speechSynthesis.speak(unlock);
+  document.getElementById("audioInfo").style.display="none";
+  speakDanish(numberToDanishCash(current));
+});
 
-      osc.start();
-      osc.stop(audioCtx.currentTime + 0.15); // kort pip
-    }
+/* ====== Spel-logik ====== */
+let current=null,lastAsked=null;
 
-    document.getElementById("startAudio").addEventListener("click", () => {
-      audioEnabled = true;
+function getRandomNumber(){
+  let n;
+  do {
+    n=Math.random()*999.99;
+    n=Math.round(n*100)/100;
+  } while(n===lastAsked);
+  return n;
+}
 
-      // Skapa AudioContext EFTER klick (krav i Samsung Internet)
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function newNumber(){
+  current=getRandomNumber();
+  lastAsked=current;
+  document.getElementById("word").textContent = numberToDanishCash(current);
+  speakDanish(numberToDanishCash(current));
+  document.getElementById("answer").value="";
+  document.getElementById("result").textContent="";
+  document.getElementById("answer").focus();
+}
 
-      // Lås upp talsyntes
-      const unlock = new SpeechSynthesisUtterance(" ");
-      unlock.lang = "da-DK";
-      speechSynthesis.speak(unlock);
+function check(){
+  const input=document.getElementById("answer").value.trim();
+  if(input==="") return;
+  const answer=parseFloat(input);
 
-      document.getElementById("audioInfo").style.display = "none";
+  // Avrunda current till närmaste 0.05 för kassaspråk
+  const roundedCurrent = Math.round(current * 20) / 20;
 
-      // Läs upp första talet
-      speakDanish(numberToDanish(current));
-    });
+  if(Math.abs(answer - roundedCurrent) < 0.01){
+    document.getElementById("result").textContent="✅ Korrekt!";
+  } else {
+    document.getElementById("result").textContent="❌ Forkert – korrekt svar er "+roundedCurrent.toFixed(2);
+    playErrorBeep();
+  }
+  setTimeout(newNumber,1200);
+}
 
-    /* ====== SPELLOGIK ====== */
-    let current = null;
-    let lastAsked = null;
+document.getElementById("answer").addEventListener("keydown",e=>{
+  if(e.key==="Enter") check();
+});
 
-    function getRandomNumber() {
-      let n;
-      do {
-        n = Math.floor(Math.random() * 100);
-      } while (n === lastAsked);
-      return n;
-    }
-
-    function newNumber() {
-      current = getRandomNumber();
-      lastAsked = current;
-
-      const word = numberToDanish(current);
-      document.getElementById("word").textContent = word;
-
-      speakDanish(word);
-
-      document.getElementById("answer").value = "";
-      document.getElementById("result").textContent = "";
-      document.getElementById("answer").focus();
-    }
-
-    function check() {
-      const input = document.getElementById("answer").value.trim();
-      if (input === "") return;
-
-      const answer = parseInt(input, 10);
-
-      if (answer === current) {
-        document.getElementById("result").textContent = "✅ Korrekt!";
-      } else {
-        document.getElementById("result").textContent =
-          "❌ Forkert – korrekt svar er " + current;
-        playErrorBeep(); // 🔔 felsignal
-      }
-
-      setTimeout(newNumber, 1200);
-    }
-
-    document.getElementById("answer").addEventListener("keydown", e => {
-      if (e.key === "Enter") check();
-    });
-
-    // Start spelet (utan ljud)
-    newNumber();
-  </script>
+// Starta spelet utan ljud
+newNumber();
+</script>
 
 </body>
 </html>
